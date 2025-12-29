@@ -34,7 +34,11 @@ export function newRequestId(): string {
 export function newTraceId(): string {
   const bytes = new Array(16)
     .fill(0)
-    .map(() => Math.floor(Math.random() * 256).toString(16).padStart(2, '0'))
+    .map(() =>
+      Math.floor(Math.random() * 256)
+        .toString(16)
+        .padStart(2, '0')
+    )
     .join('');
   return bytes;
 }
@@ -45,7 +49,11 @@ export function newTraceId(): string {
 export function newSpanId(): string {
   const bytes = new Array(8)
     .fill(0)
-    .map(() => Math.floor(Math.random() * 256).toString(16).padStart(2, '0'))
+    .map(() =>
+      Math.floor(Math.random() * 256)
+        .toString(16)
+        .padStart(2, '0')
+    )
     .join('');
   return bytes;
 }

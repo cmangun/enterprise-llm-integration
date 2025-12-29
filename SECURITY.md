@@ -33,6 +33,7 @@ We follow responsible disclosure practices:
 ### Scope
 
 This policy applies to:
+
 - All code in this repository
 - Configuration files and templates
 - Documentation that could expose security-sensitive information

@@ -65,7 +65,7 @@ import { OpenAIAdapter } from 'enterprise-llm-integration';
 
 const adapter = new OpenAIAdapter({
   apiKey: process.env.OPENAI_API_KEY!,
-  usdCeilingPerRequest: 0.25,  // Governance: max cost per request
+  usdCeilingPerRequest: 0.25, // Governance: max cost per request
   maxRetries: 3,
 });
 
@@ -78,7 +78,7 @@ const response = await adapter.chat({
 });
 
 console.log(response.content);
-console.log(`Request ID: ${response.requestId}`);  // For audit correlation
+console.log(`Request ID: ${response.requestId}`); // For audit correlation
 console.log(`Tokens used: ${response.usage.totalTokens}`);
 ```
 
@@ -86,33 +86,33 @@ console.log(`Tokens used: ${response.usage.totalTokens}`);
 
 - **Secrets**: Never committed. Use `.env` files locally, secret managers in production.
 - **Request IDs**: Every request gets a unique `X-Request-Id` header for audit correlation.
-- **Cost Guards**: Requests exceeding budget are rejected *before* API calls.
+- **Cost Guards**: Requests exceeding budget are rejected _before_ API calls.
 - **Telemetry**: Spans include model, tokens, latency for observability.
 
 ## API Reference
 
 ### OpenAIAdapter
 
-| Method | Description |
-|--------|-------------|
-| `chat(request)` | Full chat completion with all options |
-| `complete(prompt)` | Simple single-turn completion |
+| Method             | Description                           |
+| ------------------ | ------------------------------------- |
+| `chat(request)`    | Full chat completion with all options |
+| `complete(prompt)` | Simple single-turn completion         |
 
 ### Governance
 
-| Function | Description |
-|----------|-------------|
-| `assertWithinCostCeiling(input)` | Throws if estimated cost exceeds ceiling |
-| `estimateTokens(text)` | Estimate token count from text |
-| `estimateCost(model, input, output)` | Calculate cost estimate |
+| Function                             | Description                              |
+| ------------------------------------ | ---------------------------------------- |
+| `assertWithinCostCeiling(input)`     | Throws if estimated cost exceeds ceiling |
+| `estimateTokens(text)`               | Estimate token count from text           |
+| `estimateCost(model, input, output)` | Calculate cost estimate                  |
 
 ### Telemetry
 
-| Function | Description |
-|----------|-------------|
-| `newRequestId()` | Generate unique request correlation ID |
-| `startSpan(name)` | Begin a telemetry span |
-| `endSpan(span)` | Complete span with duration |
+| Function          | Description                            |
+| ----------------- | -------------------------------------- |
+| `newRequestId()`  | Generate unique request correlation ID |
+| `startSpan(name)` | Begin a telemetry span                 |
+| `endSpan(span)`   | Complete span with duration            |
 
 ## Next Iterations
 

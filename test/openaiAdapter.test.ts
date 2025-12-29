@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  OpenAIAdapter,
-  OpenAIChatRequestSchema,
-} from '../src/adapters/openaiAdapter.js';
+import { OpenAIAdapter, OpenAIChatRequestSchema } from '../src/adapters/openaiAdapter.js';
 import {
   assertWithinCostCeiling,
   CostGuardError,
@@ -78,7 +75,7 @@ describe('CostGuard', () => {
   it('allows requests within ceiling', () => {
     const result = assertWithinCostCeiling({
       estTokens: 1000,
-      estUsd: 0.10,
+      estUsd: 0.1,
       usdCeiling: 0.25,
     });
     expect(result.allowed).toBe(true);
@@ -89,7 +86,7 @@ describe('CostGuard', () => {
     expect(() =>
       assertWithinCostCeiling({
         estTokens: 10000,
-        estUsd: 0.50,
+        estUsd: 0.5,
         usdCeiling: 0.25,
       })
     ).toThrow(CostGuardError);
@@ -99,7 +96,7 @@ describe('CostGuard', () => {
     try {
       assertWithinCostCeiling({
         estTokens: 10000,
-        estUsd: 0.50,
+        estUsd: 0.5,
         usdCeiling: 0.25,
         model: 'gpt-4o',
       });
