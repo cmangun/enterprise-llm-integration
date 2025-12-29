@@ -1,0 +1,6 @@
+flowchart LR
+  Client([Client]) --> Adapter[LLM Adapter]
+  Adapter --> Gov[Cost & Policy Guard]
+  Gov --> Trace[Telemetry]
+  Trace --> Provider([LLM Provider])
+  Gov --> Audit[(Audit Log)]
