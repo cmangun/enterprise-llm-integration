@@ -1,12 +1,12 @@
 /**
- * OpenAI Adapter - Governed LLM API client
+ * OpenAI Adapter - Secure wrapper for OpenAI API calls
  */
 
 import { z } from 'zod';
 import { CostGuard, CostGuardError } from '../governance/costGuard.js';
 import { PIIDetector } from '../governance/piiDetector.js';
 import { AuditLogger } from '../governance/auditLogger.js';
-import { newRequestId, startSpan, endSpan } from '../telemetry/tracing.js';
+import { generateRequestId, startSpan, endSpan } from '../telemetry/tracing.js';
 
 export const OpenAIChatRequestSchema = z.object({
   model: z.string().min(1),
@@ -40,11 +40,12 @@ export interface OpenAIAdapterConfig {
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise(r => setTimeout(r, ms));
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 export class OpenAIAdapter {
-  private readonly config: Required<Omit<OpenAIAdapterConfig, 'costGuard' | 'piiDetector' | 'auditLogger'>> & Pick<OpenAIAdapterConfig, 'costGuard' | 'piiDetector' | 'auditLogger'>;
+  private readonly config: Required<Pick<OpenAIAdapterConfig, 'apiKey' | 'baseUrl' | 'maxRetries' | 'timeoutMs'>> & 
+    Pick<OpenAIAdapterConfig, 'costGuard' | 'piiDetector' | 'auditLogger'>;
 
   constructor(config: OpenAIAdapterConfig) {
     this.config = {
@@ -60,9 +61,38 @@ export class OpenAIAdapter {
 
   async chat(request: OpenAIChatRequest): Promise<OpenAIChatResponse> {
     const parsed = OpenAIChatRequestSchema.parse(request);
-    const requestId = newRequestId();
+    const requestId = generateRequestId();
     const span = startSpan('openai.chat');
-    const startTime = performance.now();
+    const startTime = Date.now();
+
+    // Estimate tokens and cost
+    const inputText = parsed.messages.map(m => m.content).join(' ');
+    const estimatedInputTokens = Math.ceil(inputText.length / 4);
+    const estimatedOutputTokens = parsed.max_tokens || 500;
+
+    // Cost check
+    if (this.config.costGuard) {
+      const estimatedCost = this.config.costGuard.estimateCost({
+        model: parsed.model,
+        inputTokens: estimatedInputTokens,
+        outputTokens: estimatedOutputTokens,
+      });
+      
+      const budgetCheck = await this.config.costGuard.checkBudget({
+        estimatedCost,
+        requestId,
+      });
+
+      if (!budgetCheck.allowed) {
+        this.config.auditLogger?.logGovernance({
+          action: 'governance.cost_exceeded',
+          requestId,
+          allowed: false,
+          reason: budgetCheck.reason,
+        });
+        throw new CostGuardError(budgetCheck.reason || 'Budget exceeded');
+      }
+    }
 
     // PII redaction
     let processedMessages = parsed.messages;
@@ -73,28 +103,6 @@ export class OpenAIAdapter {
       }));
     }
 
-    // Cost estimation
-    const inputText = processedMessages.map(m => m.content).join(' ');
-    const estimatedInputTokens = Math.ceil(inputText.length / 4);
-    const estimatedOutputTokens = parsed.max_tokens || 500;
-
-    if (this.config.costGuard) {
-      const estimatedCost = this.config.costGuard.estimateCost({
-        model: parsed.model,
-        inputTokens: estimatedInputTokens,
-        outputTokens: estimatedOutputTokens,
-      });
-
-      const budgetCheck = await this.config.costGuard.checkBudget({
-        estimatedCost,
-        requestId,
-      });
-
-      if (!budgetCheck.allowed) {
-        throw new CostGuardError(budgetCheck.reason || 'Budget exceeded', 'BUDGET_EXCEEDED');
-      }
-    }
-
     // Log request
     this.config.auditLogger?.logRequest({
       requestId,
@@ -102,15 +110,14 @@ export class OpenAIAdapter {
       inputTokens: estimatedInputTokens,
     });
 
-    const url = `${this.config.baseUrl.replace(/\/$/, '')}/chat/completions`;
+    // Make API call with retries
     let lastError: Error | null = null;
-
     for (let attempt = 0; attempt <= this.config.maxRetries; attempt++) {
       try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), this.config.timeoutMs);
 
-        const response = await fetch(url, {
+        const response = await fetch(`${this.config.baseUrl}/chat/completions`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${this.config.apiKey}`,
@@ -129,21 +136,19 @@ export class OpenAIAdapter {
         }
 
         const json = await response.json() as any;
-        const content = json?.choices?.[0]?.message?.content ?? '';
+        const content = json.choices?.[0]?.message?.content || '';
         const usage = {
-          promptTokens: json?.usage?.prompt_tokens ?? 0,
-          completionTokens: json?.usage?.completion_tokens ?? 0,
-          totalTokens: json?.usage?.total_tokens ?? 0,
+          promptTokens: json.usage?.prompt_tokens || 0,
+          completionTokens: json.usage?.completion_tokens || 0,
+          totalTokens: json.usage?.total_tokens || 0,
         };
 
+        const durationMs = Date.now() - startTime;
         const cost = this.config.costGuard?.estimateCost({
           model: parsed.model,
           inputTokens: usage.promptTokens,
           outputTokens: usage.completionTokens,
-        }) ?? 0;
-
-        const durationMs = performance.now() - startTime;
-        endSpan(span, 'ok');
+        }) || 0;
 
         // Record usage
         if (this.config.costGuard) {
@@ -167,19 +172,25 @@ export class OpenAIAdapter {
           success: true,
         });
 
+        endSpan(span, 'ok');
         return { requestId, model: parsed.model, content, usage, cost, durationMs };
+
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        
         if (attempt < this.config.maxRetries) {
-          const backoff = Math.min(1000 * Math.pow(2, attempt), 10000);
-          await sleep(backoff);
+          await sleep(250 * Math.pow(2, attempt));
         }
       }
     }
 
+    // Log error
+    this.config.auditLogger?.logError({
+      requestId,
+      error: lastError!,
+      context: 'OpenAI API call failed after retries',
+    });
+
     endSpan(span, 'error');
-    this.config.auditLogger?.logError({ requestId, error: lastError! });
     throw lastError;
   }
 }

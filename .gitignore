@@ -34,3 +34,6 @@ coverage/
 # Misc
 *.tgz
 .cache/
+
+packages/demo/.next/
+packages/demo/node_modules/

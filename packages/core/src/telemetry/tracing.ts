@@ -1,5 +1,5 @@
 /**
- * Telemetry - Distributed tracing for LLM operations
+ * Telemetry - Distributed tracing for LLM requests
  */
 
 export interface Span {
@@ -7,9 +7,9 @@ export interface Span {
   traceId: string;
   parentSpanId?: string;
   name: string;
-  startTime: number;
-  endTime?: number;
-  attributes: Record<string, string | number | boolean>;
+  startTimeMs: number;
+  endTimeMs?: number;
+  attributes: Record<string, unknown>;
   status: 'ok' | 'error' | 'unset';
 }
 
@@ -31,7 +31,7 @@ export function generateSpanId(): string {
   return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-export function newRequestId(): string {
+export function generateRequestId(): string {
   return `req_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
@@ -41,47 +41,28 @@ export function startSpan(name: string, parentContext?: TraceContext): Span {
     traceId: parentContext?.traceId || generateTraceId(),
     parentSpanId: parentContext?.spanId,
     name,
-    startTime: performance.now(),
+    startTimeMs: Date.now(),
     attributes: {},
     status: 'unset',
   };
 }
 
 export function endSpan(span: Span, status: 'ok' | 'error' = 'ok'): Span {
-  return {
-    ...span,
-    endTime: performance.now(),
-    status,
-  };
+  return { ...span, endTimeMs: Date.now(), status };
 }
 
-export function setSpanAttribute(span: Span, key: string, value: string | number | boolean): void {
-  span.attributes[key] = value;
+export function setSpanAttribute(span: Span, key: string, value: unknown): Span {
+  return { ...span, attributes: { ...span.attributes, [key]: value } };
 }
 
-export function getSpanDuration(span: Span): number | undefined {
-  if (span.endTime === undefined) return undefined;
-  return span.endTime - span.startTime;
+export function getSpanDuration(span: Span): number | null {
+  if (!span.endTimeMs) return null;
+  return span.endTimeMs - span.startTimeMs;
 }
 
 export function createTraceContext(span: Span): TraceContext {
-  return {
-    traceId: span.traceId,
-    spanId: span.spanId,
-    traceFlags: 1,
-  };
+  return { traceId: span.traceId, spanId: span.spanId, traceFlags: 1 };
 }
 
-export function formatTraceParent(context: TraceContext): string {
-  return `00-${context.traceId}-${context.spanId}-${context.traceFlags.toString(16).padStart(2, '0')}`;
-}
-
-export function parseTraceParent(header: string): TraceContext | null {
-  const parts = header.split('-');
-  if (parts.length !== 4 || parts[0] !== '00') return null;
-  return {
-    traceId: parts[1],
-    spanId: parts[2],
-    traceFlags: parseInt(parts[3], 16),
-  };
-}
+// Convenience exports for compatibility
+export const newRequestId = generateRequestId;
