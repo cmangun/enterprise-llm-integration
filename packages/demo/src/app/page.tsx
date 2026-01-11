@@ -10,7 +10,7 @@ import {
   type ConfidenceResult,
   type AuditLogEntry,
   type BudgetCheckResult,
-} from '@/lib/governance';
+} from '../lib/governance';
 
 // ============================================================================
 // COST GUARD DEMO
