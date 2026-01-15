@@ -8,13 +8,13 @@
 
 Production-grade LLM governance library for regulated healthcare and pharmaceutical environments.
 
-## 🎯 [Live Demo](https://enterprise-llm-governance-demo.vercel.app)
+## [Live Demo](https://enterprise-llm-governance-demo.vercel.app)
 
 > **Try it now:** Interactive demo showcasing all 4 governance modules with real-time feedback.
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 git clone https://github.com/cmangun/enterprise-llm-integration.git
@@ -34,7 +34,7 @@ npm install && npm test
 
 ---
 
-## 📊 Customer Value
+## Customer Value
 
 | Metric | Impact |
 |--------|--------|
@@ -45,7 +45,7 @@ npm install && npm test
 
 ---
 
-## 🔒 Governance Modules
+## Governance Modules
 
 ### Cost Guard
 Budget enforcement with per-request, session, and daily limits.
@@ -114,7 +114,7 @@ logger.logRequest('llm.chat', { model: 'gpt-4o', tokens: 500 });
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -140,7 +140,7 @@ logger.logRequest('llm.chat', { model: 'gpt-4o', tokens: 500 });
 
 ---
 
-## 🏥 Compliance Ready
+## Compliance Ready
 
 | Standard | Implementation |
 |----------|----------------|
@@ -150,7 +150,7 @@ logger.logRequest('llm.chat', { model: 'gpt-4o', tokens: 500 });
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 enterprise-llm-integration/
