@@ -8,6 +8,17 @@
 
 Production-grade LLM governance library for regulated healthcare and pharmaceutical environments.
 
+## Payer-Specific Governance Mapping
+
+Each module addresses a concrete concern inside a healthcare payer's AI platform:
+
+| Module | Payer Concern | Example |
+|--------|---------------|---------|
+| **Cost Guard** | Token budget per member query | Prevent a single complex benefits question from consuming $50 in API calls. Enforce per-member, per-session, and daily limits. |
+| **PII Detector** | HIPAA PHI compliance | Redact member names, SSNs, and DOBs before they reach the LLM. Detect 18 HIPAA Safe Harbor identifier types. |
+| **Confidence Gate** | Explainable benefit explanations | Flag low-confidence coverage answers for human review rather than serving uncertain information to members. |
+| **Audit Logger** | Regulatory audit trail | Produce tamper-evident, integrity-hashed logs for CMS audits, HIPAA incident response, and SOC 2 evidence. |
+
 ## [Live Demo](https://enterprise-llm-governance-demo.vercel.app)
 
 > **Try it now:** Interactive demo showcasing all 4 governance modules with real-time feedback.
@@ -167,7 +178,37 @@ enterprise-llm-integration/
 
 ---
 
-## 🔜 Roadmap
+## Production Deployment Considerations
+
+### Identity-Scoped Governance
+In a payer environment, governance must be scoped per member:
+- **Cost tracking per member ID** — prevent one member's complex query from exhausting shared budgets
+- **PII detection scoped to member context** — ensure PHI from Member A never leaks into Member B's LLM context
+- **Audit correlation** — every log entry links to a member ID, session ID, and request ID for incident investigation
+
+### Multi-Tenant Isolation
+When serving multiple employer groups or plan types:
+- Cost Guard budgets can be partitioned by group ID or plan tier
+- PII detection rules vary by data classification (PHI vs PII vs public)
+- Audit logs support tenant-level filtering for compliance reviews
+
+### FHIR Integration Points
+The governance layer sits between the FHIR integration surface and the LLM:
+```
+FHIR API (benefits, eligibility, claims)
+        ↓
+PII Detector  →  redact before LLM
+Cost Guard    →  budget check before API call
+        ↓
+LLM Provider (OpenAI, Azure, Anthropic)
+        ↓
+Confidence Gate  →  quality check before member sees response
+Audit Logger     →  compliance record for every interaction
+```
+
+---
+
+## Roadmap
 
 - [ ] Azure OpenAI adapter
 - [ ] Anthropic Claude adapter
@@ -177,10 +218,17 @@ enterprise-llm-integration/
 
 ---
 
-## 📚 Related Resources
+## Related Repositories
+
+- [deployable-ai-agents](https://github.com/cmangun/deployable-ai-agents) — Agent framework with policy engine and tool orchestration
+- [healthcare-rag-platform](https://github.com/cmangun/healthcare-rag-platform) — HIPAA-compliant RAG with PHI detection and guardrails
+- [agentic-member-assistant](https://github.com/cmangun/agentic-member-assistant) — Virtual health assistant with identity-scoped retrieval
+- [agentic-streaming-backend](https://github.com/cmangun/agentic-streaming-backend) — SSE streaming with backpressure and circuit breakers
+- [fhir-integration-service](https://github.com/cmangun/fhir-integration-service) — FHIR R4 interoperability service
+
+## Resources
 
 - **Live Demo**: [enterprise-llm-governance-demo.vercel.app](https://enterprise-llm-governance-demo.vercel.app)
-- **Portfolio**: [healthcare-ai-consultant.com](https://healthcare-ai-consultant.com)
 - **GitHub**: [github.com/cmangun](https://github.com/cmangun)
 
 ---
